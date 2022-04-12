@@ -1,3 +1,19 @@
+FROM alpine AS build-mencoder
+
+RUN apk add --no-cache subversion git alpine-sdk yasm linux-headers
+
+RUN svn checkout svn://svn.mplayerhq.hu/mplayer/trunk /mplayer
+
+WORKDIR /mplayer
+
+COPY fix-static-build.diff /mplayer
+
+RUN patch < fix-static-build.diff
+
+RUN ./configure --enable-static --disable-mplayer
+
+RUN make -j 4 mencoder
+
 FROM alpine
 
 MAINTAINER Anand Tamariya <atamariya@gmail.com>
@@ -20,3 +36,6 @@ CMD java $JVM_OPTS -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitFor
 
 COPY . /usr/src/ums
 
+RUN rm -f fix-static-build.diff
+
+COPY --from=build-mencoder /mplayer/mencoder /usr/local/bin/mencoder
